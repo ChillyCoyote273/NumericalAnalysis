@@ -19,6 +19,16 @@ def secant_method(x_0: float, x_1: float) -> float:
     return (x_1 * f_x_0 - x_0 * f_x_1) / (f_x_0 - f_x_1)
 
 
+def bisection_method(a: float, b: float) -> tuple[float, float]:
+    f_a = np.sign(function(a))
+    f_b = np.sign(function(b))
+    c = (a + b) / 2
+    f_c = np.sign(function(c))
+    if f_a == f_c:
+        return c, b
+    return a, c
+
+
 def main() -> None:
     x = 0
     for i in range(8):
@@ -32,6 +42,14 @@ def main() -> None:
     for i in range(11):
         x_1, x_0 = secant_method(x_0, x_1), x_1
         print(f'{i}: {x_1}')
+    
+    print('\n')
+
+    a = -1
+    b = 0
+    for i in range(53):
+        a, b = bisection_method(a, b)
+        print(f'{i}: {(a + b) / 2}')
 
 
 if __name__ == "__main__":
