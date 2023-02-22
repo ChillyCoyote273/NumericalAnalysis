@@ -31,11 +31,12 @@ def bisection_method(a: float, b: float) -> tuple[float, float]:
 
 def main() -> None:
     x = 0
+    print("Newton-Raphson method:")
     for i in range(8):
         x = newton_raphson(x)
         print(f'{i}: {x}')
     
-    print('\n')
+    print('\nSecant method:')
     
     x_0 = 0
     x_1 = 0.1
@@ -43,7 +44,7 @@ def main() -> None:
         x_1, x_0 = secant_method(x_0, x_1), x_1
         print(f'{i}: {x_1}')
     
-    print('\n')
+    print('\nBisection method')
 
     a = -1
     b = 0
