@@ -74,27 +74,35 @@ def simpsons_rule(func, a: float, b: float, num_points: int) -> float:
     return h / 3 * (evaluations @ coefficient_vector)
 
 
-def modified_simpsons_rule(func, a: float, b: float, num_points: int) -> float:
+def alt_simpsons_rule(func, a: float, b: float, num_points: int) -> float:
+    h = (b - a) / (num_points - 1)
     points = np.linspace(a, b, num_points)
-    offsets = np.zeros(num_points)#np.random.normal(0, h / 10, num_points)
+    evaluations = func(points)
+    return h / 48 * (
+        np.array([17, 59, 43, 49]) @ evaluations[:4] +\
+        np.array([49, 43, 59, 17]) @ evaluations[-4:] +\
+        48 * sum(evaluations[4:-4])
+    )
+
+
+def modified_simpsons_rule(func, a: float, b: float, num_points: int) -> float:
+    h = (b - a) / (num_points - 1)
+    points = np.linspace(a, b, num_points)
+    offsets = np.random.normal(0, h / 10, num_points)
     points = points + offsets
     hs = np.diff(points)
     evaluations = func(points)
-    coefficients = np.array([
-        np.linalg.inv(np.array([
-        [points[i]**2, points[i], 1],
-        [points[i + 1]**2, points[i + 1], 1],
-        [points[i + 2]**2, points[i + 2], 1]
-        ])) @ np.array([evaluations[i], evaluations[i + 1], evaluations[i + 2]])
-        for i in range(0, num_points - 2, 1)
-    ])
-    ends = points[2:]
-    beginnings = points[:-2]
-    areas = coefficients[:, 0] / 3 * (ends**3 - beginnings**3) + coefficients[:, 1] / 2 * (ends**2 - beginnings**2) + coefficients[:, 2] * (ends - beginnings)
-    inner = areas.sum()
-    inner += coefficients[0, 0] / 3 * (points[1]**3 - points[0]**3) + coefficients[0, 1] / 2 * (points[1]**2 - points[0]**2) + coefficients[0, 2] * (points[1] - points[0])
-    inner += coefficients[-1, 0] / 3 * (points[-1]**3 - points[-2]**3) + coefficients[-1, 1] / 2 * (points[-1]**2 - points[-2]**2) + coefficients[-1, 2] * (points[-1] - points[-2])
-    return inner / 2
+    result = sum(
+        (h0 + h1) / 6 * ((2 - h1 / h0) * f0 + (h0 + h1)**2 / (h0 * h1) * f1 + (2 - h0 / h1) * f2) for f0, f1, f2, h0, h1 in zip(evaluations[:-2:2], evaluations[1:-1:2], evaluations[2::2], hs[:-1:2], hs[1::2])
+    )
+    if num_points % 2 == 0:
+        alpha = (2 * hs[-1]**2 + 3 * hs[-1] * hs[-2]) / (6 * (hs[-2] + hs[-1]))
+        beta = (hs[-1]**2 + 3 * hs[-1] * hs[-2]) / (6 * hs[-2])
+        eta = hs[-1]**3 / (6 * hs[-2] * (hs[-2] + hs[-1]))
+        result += alpha * evaluations[-1] + beta * evaluations[-2] - eta * evaluations[-3]
+    return result, sum(
+        h0 / 2 * (f0 + f1) for f0, f1, h0 in zip(evaluations[:-1], evaluations[1:], hs)
+    )
 
 
 def test_differentiation():
@@ -116,16 +124,27 @@ def test_differentiation():
 def test_quadrature():
     a = 1
     b = 2
-    n = 2 + 1
+    n = 20
     ant = antiderivative(b) - antiderivative(a)
+
+    divisions = 6
+    simp, trap = modified_simpsons_rule(function, a, b, 3)
+    previous = np.abs(ant - simp), np.abs(ant - trap)
+    for i in range(10):
+        simp, trap = modified_simpsons_rule(function, a, b, divisions)
+        error = np.abs(ant - simp), np.abs(ant - trap)
+        print(f'simp: {previous[0] / error[0]}   \ttrap: {previous[1] / error[1]}   \tdiff: {error[1] / error[0]}')
+        # print(f'error: {error}\tdiff: {previous / error}')
+        previous = error
+        divisions *= 2
     
-    simp = simpsons_rule(function, a, b, n)
-    mod = modified_simpsons_rule(function, a, b, n)
-    print(ant)
-    print(simp)
-    print(mod)
-    print(np.abs(ant - simp))
-    print(np.abs(ant - mod))
+    # simp = simpsons_rule(function, a, b, n)
+    # mod = modified_simpsons_rule(function, a, b, n)
+    # print(ant)
+    # print(simp)
+    # print(mod)
+    # print(np.abs(ant - simp))
+    # print(np.abs(ant - mod))
     
     # print(f'trapezoid rule: {trap}\nmidpoint rule: {rect}\nsimpson\'s rule: {simp}\ntrapezoid error: {np.abs(trap - ant)}\nmidpoint error: {np.abs(rect - ant)}\nsimpson\'s error: {np.abs(simp - ant)}')
 
